@@ -15,7 +15,7 @@ export default function NewCampaignPage() {
   const [thankYouMessage, setThankYouMessage] = useState('');
   const [questions, setQuestions] = useState<string[]>(['']);
   const [countdown, setCountdown] = useState<number>(3);
-  const [language, setLanguage] = useState<'pt-BR' | 'en'>('pt-BR');
+  const [language, setLanguage] = useState<'pt-PT' | 'en' | 'es'>('pt-PT');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,14 +62,26 @@ export default function NewCampaignPage() {
 
       const cleanQuestions = questions.map(q => q.trim()).filter(Boolean);
 
+      const defaultWelcome = language === 'pt-PT'
+        ? 'Olá! Gostaríamos muito de conhecer a sua experiência connosco. Demora menos de 2 minutos.'
+        : language === 'es'
+        ? '¡Hola! Nos encantaría conocer tu experiencia con nosotros. Toma menos de 2 minutos.'
+        : 'Hi! We would love to hear about your experience with us. It takes less than 2 minutes.';
+
+      const defaultThankYou = language === 'pt-PT'
+        ? 'Muito obrigado pelo seu testemunho!'
+        : language === 'es'
+        ? '¡Muchas gracias por tu testimonio!'
+        : 'Thank you very much for your testimonial!';
+
       const { error: insertError } = await supabase
         .from('campaigns')
         .insert([
           {
             name,
             slug,
-            message: welcomeMessage || 'Oi! Adoraríamos ouvir como foi a sua experiência com a gente. Leva menos de 2 minutos.',
-            thank_you_message: thankYouMessage || 'Muito obrigado pelo seu depoimento!',
+            message: welcomeMessage || defaultWelcome,
+            thank_you_message: thankYouMessage || defaultThankYou,
             guide_questions: cleanQuestions,
             countdown_seconds: countdown,
             language,
@@ -154,7 +166,7 @@ export default function NewCampaignPage() {
               rows={3}
               value={welcomeMessage}
               onChange={(e) => setWelcomeMessage(e.target.value)}
-              placeholder="Ex: Oi! Adoraríamos ouvir como foi sua experiência com a gente. Leva menos de 2 minutos."
+              placeholder="Ex: Olá! Gostaríamos muito de conhecer a sua experiência connosco. Demora menos de 2 minutos."
               className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
             />
           </div>
@@ -165,14 +177,14 @@ export default function NewCampaignPage() {
               Mensagem de agradecimento
             </label>
             <p className="text-[11px] text-slate-500 mb-2">
-              Aparece na tela depois que o cliente envia o depoimento. Se deixar em branco, mostramos uma mensagem padrão.
+              Aparece no ecrã após o envio do testemunho. Se deixar em branco, usamos uma mensagem padrão.
             </p>
             <textarea
               rows={3}
               maxLength={500}
               value={thankYouMessage}
               onChange={(e) => setThankYouMessage(e.target.value)}
-              placeholder="Ex: Muito obrigado! Como agradecimento, você ganhou 10% off na próxima compra – código: OBRIGADO10."
+              placeholder="Ex: Muito obrigado! Como agradecimento, utilize o código OBRIGADO10 para obter 10% de desconto."
               className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
             />
             <div className="text-right text-[10px] text-slate-500 mt-1">
@@ -183,10 +195,10 @@ export default function NewCampaignPage() {
           {/* Perguntas guias */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-0.5">
-              Perguntas guias (até 4)
+              Perguntas-guia (até 4)
             </label>
             <p className="text-[11px] text-slate-500 mb-3">
-              Aparecem na página como sugestões pro cliente.
+              Apresentadas na página de recolha como sugestões para o cliente.
             </p>
             <div className="space-y-2.5">
               {questions.map((q, idx) => (
@@ -222,13 +234,13 @@ export default function NewCampaignPage() {
             )}
           </div>
 
-          {/* Contagem regressiva antes de gravar */}
+          {/* Contagem decrescente antes de gravar */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-0.5">
-              Contagem regressiva antes de gravar
+              Contagem decrescente antes de gravar
             </label>
             <p className="text-[11px] text-slate-500 mb-3">
-              Dá tempo do cliente respirar antes da câmera/mic começar. Aplica a vídeo e voz.
+              Tempo para o cliente se preparar antes da gravação de vídeo ou áudio.
             </p>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -252,36 +264,47 @@ export default function NewCampaignPage() {
             </div>
           </div>
 
-          {/* Idioma da página de coleta */}
+          {/* Idioma da página de recolha */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-0.5">
-              Idioma da página de coleta
+              Idioma da página de recolha
             </label>
             <p className="text-[11px] text-slate-500 mb-3">
-              Define em que idioma o cliente vê a página de gravação. Independe do idioma que ele usa no navegador.
+              Define o idioma apresentado na página pública de gravação.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => setLanguage('pt-BR')}
-                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition ${
-                  language === 'pt-BR'
+                onClick={() => setLanguage('pt-PT')}
+                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition ${
+                  language === 'pt-PT'
                     ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
                     : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
                 }`}
               >
-                🇧🇷 Português (BR)
+                🇵🇹 Português (PT)
               </button>
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition ${
+                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition ${
                   language === 'en'
                     ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
                     : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
                 }`}
               >
-                🇺🇸 English
+                🇬🇧 English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('es')}
+                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition ${
+                  language === 'es'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
+                    : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                🇪🇸 Español
               </button>
             </div>
           </div>
