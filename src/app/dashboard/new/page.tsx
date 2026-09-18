@@ -11,8 +11,11 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [thankYouMessage, setThankYouMessage] = useState('');
+  const [questions, setQuestions] = useState<string[]>(['']);
+  const [countdown, setCountdown] = useState<number>(3);
+  const [language, setLanguage] = useState<'pt-BR' | 'en'>('pt-BR');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +31,22 @@ export default function NewCampaignPage() {
     setSlug(generatedSlug);
   };
 
+  const handleAddQuestion = () => {
+    if (questions.length < 4) {
+      setQuestions([...questions, '']);
+    }
+  };
+
+  const handleQuestionChange = (index: number, value: string) => {
+    const updated = [...questions];
+    updated[index] = value;
+    setQuestions(updated);
+  };
+
+  const handleRemoveQuestion = (index: number) => {
+    setQuestions(questions.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -41,14 +60,19 @@ export default function NewCampaignPage() {
         return;
       }
 
+      const cleanQuestions = questions.map(q => q.trim()).filter(Boolean);
+
       const { error: insertError } = await supabase
         .from('campaigns')
         .insert([
           {
             name,
             slug,
-            title: title || `Deixe o seu feedback sobre ${name}`,
-            message: message || 'A sua opinião é fundamental para evoluirmos continuamente os nossos serviços.',
+            message: welcomeMessage || 'Oi! Adoraríamos ouvir como foi a sua experiência com a gente. Leva menos de 2 minutos.',
+            thank_you_message: thankYouMessage || 'Muito obrigado pelo seu depoimento!',
+            guide_questions: cleanQuestions,
+            countdown_seconds: countdown,
+            language,
             user_id: user.id
           }
         ]);
@@ -67,15 +91,15 @@ export default function NewCampaignPage() {
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col justify-center items-center px-4 py-12">
-      <div className="w-full max-w-lg bg-[#0d1527] border border-slate-800/80 rounded-2xl p-8 shadow-2xl">
+      <div className="w-full max-w-xl bg-[#0d1527] border border-slate-800/80 rounded-3xl p-6 sm:p-10 shadow-2xl">
         <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
           <div>
-            <h1 className="text-xl font-bold text-white">Criar Nova Campanha</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Configure a sua página personalizada de recolha.</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Nova campanha</h1>
+            <p className="text-xs text-slate-400 mt-1">Configure a sua página personalizada de recolha.</p>
           </div>
           <Link
             href="/dashboard"
-            className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition"
+            className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition"
           >
             Voltar
           </Link>
@@ -87,10 +111,11 @@ export default function NewCampaignPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Nome do negócio */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Nome do Produto ou Empresa
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              Nome do negócio
             </label>
             <input
               type="text"
@@ -102,9 +127,10 @@ export default function NewCampaignPage() {
             />
           </div>
 
+          {/* Slug */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Link da Página (Slug)
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              Link da página (Slug)
             </label>
             <div className="flex items-center bg-[#070b14] border border-slate-700/80 rounded-xl px-3 py-2 text-sm">
               <span className="text-slate-500 text-xs select-none">/c/</span>
@@ -117,43 +143,156 @@ export default function NewCampaignPage() {
                 className="w-full bg-transparent border-none focus:outline-none text-amber-400 text-sm pl-1"
               />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1.5">
-              Este será o endereço público partilhado com os clientes.
-            </p>
           </div>
 
+          {/* Mensagem de boas-vindas */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Título do Cabeçalho (Opcional)
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="ex: Conte-nos como foi a sua experiência!"
-              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Mensagem de Apresentação (Opcional)
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Mensagem de boas-vindas
             </label>
             <textarea
               rows={3}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="ex: Deixe um breve depoimento sobre os resultados que alcançámos juntos."
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              placeholder="Ex: Oi! Adoraríamos ouvir como foi sua experiência com a gente. Leva menos de 2 minutos."
               className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
             />
           </div>
 
+          {/* Mensagem de agradecimento */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-0.5">
+              Mensagem de agradecimento
+            </label>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Aparece na tela depois que o cliente envia o depoimento. Se deixar em branco, mostramos uma mensagem padrão.
+            </p>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={thankYouMessage}
+              onChange={(e) => setThankYouMessage(e.target.value)}
+              placeholder="Ex: Muito obrigado! Como agradecimento, você ganhou 10% off na próxima compra – código: OBRIGADO10."
+              className="w-full bg-[#070b14] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-500 transition"
+            />
+            <div className="text-right text-[10px] text-slate-500 mt-1">
+              {thankYouMessage.length}/500
+            </div>
+          </div>
+
+          {/* Perguntas guias */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-0.5">
+              Perguntas guias (até 4)
+            </label>
+            <p className="text-[11px] text-slate-500 mb-3">
+              Aparecem na página como sugestões pro cliente.
+            </p>
+            <div className="space-y-2.5">
+              {questions.map((q, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-bold w-4 text-center">{idx + 1}</span>
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => handleQuestionChange(idx, e.target.value)}
+                    placeholder={`Pergunta ${idx + 1} (ex: O que achou do nosso atendimento?)`}
+                    className="flex-1 bg-[#070b14] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition"
+                  />
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveQuestion(idx)}
+                      className="text-xs text-rose-400 hover:text-rose-300 p-2"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {questions.length < 4 && (
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="mt-3 text-xs font-semibold text-amber-500 hover:text-amber-400 transition"
+              >
+                + Adicionar pergunta
+              </button>
+            )}
+          </div>
+
+          {/* Contagem regressiva antes de gravar */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-0.5">
+              Contagem regressiva antes de gravar
+            </label>
+            <p className="text-[11px] text-slate-500 mb-3">
+              Dá tempo do cliente respirar antes da câmera/mic começar. Aplica a vídeo e voz.
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Desligado', val: 0 },
+                { label: '3s', val: 3 },
+                { label: '5s', val: 5 }
+              ].map((item) => (
+                <button
+                  key={item.val}
+                  type="button"
+                  onClick={() => setCountdown(item.val)}
+                  className={`py-2.5 rounded-xl text-xs font-semibold border transition ${
+                    countdown === item.val
+                      ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
+                      : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Idioma da página de coleta */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-0.5">
+              Idioma da página de coleta
+            </label>
+            <p className="text-[11px] text-slate-500 mb-3">
+              Define em que idioma o cliente vê a página de gravação. Independe do idioma que ele usa no navegador.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setLanguage('pt-BR')}
+                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition ${
+                  language === 'pt-BR'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
+                    : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                🇧🇷 Português (BR)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`py-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition ${
+                  language === 'en'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-400 font-bold'
+                    : 'border-slate-800 bg-[#070b14] text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                🇺🇸 English
+              </button>
+            </div>
+          </div>
+
+          {/* Botão Submeter */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 font-semibold text-slate-950 rounded-xl text-sm transition shadow-lg shadow-amber-500/10 disabled:opacity-50"
+            className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 font-bold text-slate-950 rounded-xl text-sm transition shadow-lg shadow-amber-500/10 disabled:opacity-50 mt-4"
           >
-            {loading ? 'A criar campanha...' : 'Publicar Campanha'}
+            {loading ? 'A criar campanha...' : 'Criar campanha'}
           </button>
         </form>
       </div>
