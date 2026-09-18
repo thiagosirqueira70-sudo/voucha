@@ -168,9 +168,13 @@ export default function DashboardPage() {
             + Nova Campanha
           </Link>
           <Link
-            href="/wall"
+            href={selectedCampaign ? `/wall?c=${selectedCampaign.slug}` : '/wall'}
             target="_blank"
-            className="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition"
+            className={`text-xs font-semibold px-4 py-2 rounded-xl border transition ${
+              selectedCampaign
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700/60'
+                : 'opacity-40 pointer-events-none bg-slate-900 text-slate-500 border-slate-800'
+            }`}
           >
             Mural ↗
           </Link>
