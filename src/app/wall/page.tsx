@@ -1,7 +1,8 @@
-import React from 'react';
-import { supabase } from '@/lib/supabase';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface Testimonial {
   id: string;
@@ -14,49 +15,71 @@ interface Testimonial {
   created_at: string;
 }
 
-interface WallPageProps {
-  searchParams: Promise<{ c?: string }>;
-}
-
 const getMediaUrl = (pathOrUrl: string | null) => {
   if (!pathOrUrl) return '';
   if (pathOrUrl.startsWith('http')) return pathOrUrl;
   return `https://clcomwzpnfoxvanochpz.supabase.co/storage/v1/object/public/testimonials-media/${pathOrUrl}`;
 };
 
-export default async function WallOfLovePage({ searchParams }: WallPageProps) {
-  const { c: campaignSlug } = await searchParams;
+function WallContent() {
+  const searchParams = useSearchParams();
+  const campaignSlug = searchParams.get('c');
 
-  let testimonials: Testimonial[] = [];
-  let campaignTitle = 'O que dizem sobre nós';
+  const [campaignTitle, setCampaignTitle] = useState('O que dizem sobre nós');
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (campaignSlug) {
-    const { data: campaign } = await supabase
-      .from('campaigns')
-      .select('id, name, business_name')
-      .eq('slug', campaignSlug.trim())
-      .single();
+  useEffect(() => {
+    async function fetchWallData() {
+      setLoading(true);
 
-    if (campaign) {
-      const displayName = campaign.business_name || campaign.name;
-      if (displayName) {
-        campaignTitle = `O que dizem sobre ${displayName}`;
+      if (!campaignSlug) {
+        // Se não houver slug, procura os depoimentos aprovados em geral
+        const { data } = await supabase
+          .from('testimonials')
+          .select('*')
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false });
+
+        setTestimonials(data || []);
+        setLoading(false);
+        return;
       }
 
-      const { data } = await supabase
-        .from('testimonials')
-        .select('*')
-        .eq('campaign_id', campaign.id)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
+      // Procura a campanha correspondente ao slug
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('id, name, business_name')
+        .eq('slug', campaignSlug.trim())
+        .maybeSingle();
 
-      testimonials = data || [];
+      if (campaign) {
+        const titleName = campaign.business_name || campaign.name;
+        if (titleName) {
+          setCampaignTitle(`O que dizem sobre ${titleName}`);
+        }
+
+        const { data } = await supabase
+          .from('testimonials')
+          .select('*')
+          .eq('campaign_id', campaign.id)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false });
+
+        setTestimonials(data || []);
+      } else {
+        setTestimonials([]);
+      }
+
+      setLoading(false);
     }
-  }
+
+    fetchWallData();
+  }, [campaignSlug]);
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 py-16 px-4">
-      {/* Topo / Apresentação */}
+      {/* Topo do Mural */}
       <div className="max-w-5xl mx-auto text-center mb-12">
         <span className="text-[11px] uppercase tracking-widest font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
           Prova Social Real
@@ -69,9 +92,13 @@ export default async function WallOfLovePage({ searchParams }: WallPageProps) {
         </p>
       </div>
 
-      {/* Lista de Testemunhos */}
+      {/* Área dos Cartões */}
       <div className="max-w-6xl mx-auto">
-        {testimonials.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-sm text-slate-500">
+            A carregar testemunhos...
+          </div>
+        ) : testimonials.length === 0 ? (
           <div className="text-center py-16 bg-[#0d1527] border border-slate-800/80 rounded-2xl max-w-md mx-auto p-8">
             <p className="text-sm text-slate-400">
               Ainda não existem testemunhos aprovados para este mural.
@@ -141,5 +168,13 @@ export default async function WallOfLovePage({ searchParams }: WallPageProps) {
         )}
       </div>
     </div>
+  );
+}
+
+export default function WallOfLovePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#070b14] flex items-center justify-center text-slate-500 text-sm">A carregar mural...</div>}>
+      <WallContent />
+    </Suspense>
   );
 }
