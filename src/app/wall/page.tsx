@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
 
 interface Testimonial {
   id: string;
@@ -12,6 +13,7 @@ interface Testimonial {
   content: string | null;
   media_url: string | null;
   rating: number;
+  status: string;
   created_at: string;
 }
 
@@ -21,61 +23,71 @@ const getMediaUrl = (pathOrUrl: string | null) => {
   return `https://clcomwzpnfoxvanochpz.supabase.co/storage/v1/object/public/testimonials-media/${pathOrUrl}`;
 };
 
-function WallContent() {
-  const searchParams = useSearchParams();
-  const campaignSlug = searchParams.get('c');
-
+export default function WallOfLovePage() {
   const [campaignTitle, setCampaignTitle] = useState('O que dizem sobre nós');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchWallData() {
+    async function loadWall() {
       setLoading(true);
 
-      if (!campaignSlug) {
-        // Se não houver slug, procura os depoimentos aprovados em geral
-        const { data } = await supabase
-          .from('testimonials')
-          .select('*')
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
-
-        setTestimonials(data || []);
-        setLoading(false);
-        return;
+      // Lê o parâmetro ?c= diretamente da URL real do navegador
+      let slug = '';
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        slug = (params.get('c') || '').trim().toLowerCase();
       }
 
-      // Procura a campanha correspondente ao slug
-      const { data: campaign } = await supabase
-        .from('campaigns')
-        .select('id, name, business_name')
-        .eq('slug', campaignSlug.trim())
-        .maybeSingle();
+      try {
+        let targetCampaignId: string | null = null;
 
-      if (campaign) {
-        const titleName = campaign.business_name || campaign.name;
-        if (titleName) {
-          setCampaignTitle(`O que dizem sobre ${titleName}`);
+        if (slug) {
+          // Busca a campanha pelo slug
+          const { data: campaign } = await supabase
+            .from('campaigns')
+            .select('id, name, business_name, slug')
+            .ilike('slug', slug)
+            .maybeSingle();
+
+          if (campaign) {
+            targetCampaignId = campaign.id;
+            const displayName = campaign.business_name || campaign.name;
+            if (displayName) {
+              setCampaignTitle(`O que dizem sobre ${displayName}`);
+            }
+          }
         }
 
-        const { data } = await supabase
+        // Monta a consulta de testemunhos
+        let query = supabase
           .from('testimonials')
           .select('*')
-          .eq('campaign_id', campaign.id)
           .eq('status', 'approved')
           .order('created_at', { ascending: false });
 
-        setTestimonials(data || []);
-      } else {
-        setTestimonials([]);
-      }
+        // Se encontrou a campanha pelo slug, filtra por ela; se não achar slug, traz todos os aprovados
+        if (targetCampaignId) {
+          query = query.eq('campaign_id', targetCampaignId);
+        }
 
-      setLoading(false);
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Erro ao buscar do Supabase:', error);
+          setTestimonials([]);
+        } else {
+          setTestimonials(data || []);
+        }
+      } catch (err) {
+        console.error('Erro inesperado:', err);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    fetchWallData();
-  }, [campaignSlug]);
+    loadWall();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 py-16 px-4">
@@ -92,7 +104,7 @@ function WallContent() {
         </p>
       </div>
 
-      {/* Área dos Cartões */}
+      {/* Cartões dos Testemunhos */}
       <div className="max-w-6xl mx-auto">
         {loading ? (
           <div className="text-center py-16 text-sm text-slate-500">
@@ -112,7 +124,7 @@ function WallContent() {
               return (
                 <div
                   key={t.id}
-                  className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between"
+                  className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700 transition"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -136,6 +148,16 @@ function WallContent() {
                           <source src={resolvedUrl} type="video/mp4" />
                           O seu navegador não suporta este formato de vídeo.
                         </video>
+                        <div className="mt-1 flex justify-end">
+                          <a
+                            href={resolvedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-amber-400 hover:underline"
+                          >
+                            Abrir vídeo direto ↗
+                          </a>
+                        </div>
                       </div>
                     )}
 
@@ -168,13 +190,5 @@ function WallContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function WallOfLovePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#070b14] flex items-center justify-center text-slate-500 text-sm">A carregar mural...</div>}>
-      <WallContent />
-    </Suspense>
   );
 }
