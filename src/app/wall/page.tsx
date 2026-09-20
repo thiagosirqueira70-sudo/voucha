@@ -24,63 +24,66 @@ const getMediaUrl = (pathOrUrl: string | null) => {
 };
 
 export default function WallOfLovePage() {
-  const [campaignTitle, setCampaignTitle] = useState('O que dizem sobre nós');
+  const [campaignTitle, setCampaignTitle] = useState('');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     async function loadWall() {
       setLoading(true);
+      setNotFound(false);
 
-      // Lê o parâmetro ?c= diretamente da URL real do navegador
+      // 1. Extrai estritamente o slug da URL atual
       let slug = '';
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         slug = (params.get('c') || '').trim().toLowerCase();
       }
 
+      // Se não houver slug na URL, BLOQUEIA IMEDIATAMENTE.
+      // Jamais exibe testemunhos aleatórios de outras contas.
+      if (!slug) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
       try {
-        let targetCampaignId: string | null = null;
+        // 2. Busca estritamente a campanha associada a este slug
+        const { data: campaign, error: campaignError } = await supabase
+          .from('campaigns')
+          .select('id, name, business_name, slug')
+          .eq('slug', slug)
+          .maybeSingle();
 
-        if (slug) {
-          // Busca a campanha pelo slug
-          const { data: campaign } = await supabase
-            .from('campaigns')
-            .select('id, name, business_name, slug')
-            .ilike('slug', slug)
-            .maybeSingle();
-
-          if (campaign) {
-            targetCampaignId = campaign.id;
-            const displayName = campaign.business_name || campaign.name;
-            if (displayName) {
-              setCampaignTitle(`O que dizem sobre ${displayName}`);
-            }
-          }
+        if (campaignError || !campaign) {
+          setNotFound(true);
+          setTestimonials([]);
+          setLoading(false);
+          return;
         }
 
-        // Monta a consulta de testemunhos
-        let query = supabase
+        const displayName = campaign.business_name || campaign.name || 'Empresa';
+        setCampaignTitle(`O que dizem sobre ${displayName}`);
+
+        // 3. Busca EXCLUSIVAMENTE os testemunhos aprovados DESTA campanha específica
+        const { data: testimonialsData, error: testimonialsError } = await supabase
           .from('testimonials')
           .select('*')
+          .eq('campaign_id', campaign.id)
           .eq('status', 'approved')
           .order('created_at', { ascending: false });
 
-        // Se encontrou a campanha pelo slug, filtra por ela; se não achar slug, traz todos os aprovados
-        if (targetCampaignId) {
-          query = query.eq('campaign_id', targetCampaignId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('Erro ao buscar do Supabase:', error);
+        if (testimonialsError || !testimonialsData) {
           setTestimonials([]);
         } else {
-          setTestimonials(data || []);
+          setTestimonials(testimonialsData);
         }
       } catch (err) {
-        console.error('Erro inesperado:', err);
+        console.error('Erro ao carregar mural:', err);
+        setTestimonials([]);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -97,23 +100,31 @@ export default function WallOfLovePage() {
           Prova Social Real
         </span>
         <h1 className="text-3xl md:text-5xl font-black text-white mt-4 mb-3 tracking-tight">
-          {campaignTitle}
+          {notFound ? 'Mural não encontrado' : campaignTitle || 'Testemunhos'}
         </h1>
         <p className="text-sm text-slate-400 max-w-lg mx-auto">
-          Confira a experiência autêntica dos nossos clientes contada em primeira pessoa.
+          {notFound
+            ? 'A campanha solicitada não existe ou o endereço do mural está incorreto.'
+            : 'Confira a experiência autêntica dos nossos clientes contada em primeira pessoa.'}
         </p>
       </div>
 
-      {/* Cartões dos Testemunhos */}
+      {/* Área dos Testemunhos */}
       <div className="max-w-6xl mx-auto">
         {loading ? (
           <div className="text-center py-16 text-sm text-slate-500">
             A carregar testemunhos...
           </div>
+        ) : notFound ? (
+          <div className="text-center py-16 bg-[#0d1527] border border-slate-800/80 rounded-2xl max-w-md mx-auto p-8">
+            <p className="text-sm text-slate-400">
+              Nenhuma campanha encontrada com este identificador.
+            </p>
+          </div>
         ) : testimonials.length === 0 ? (
           <div className="text-center py-16 bg-[#0d1527] border border-slate-800/80 rounded-2xl max-w-md mx-auto p-8">
             <p className="text-sm text-slate-400">
-              Ainda não existem testemunhos aprovados para este mural.
+              Ainda não existem testemunhos aprovados para esta campanha.
             </p>
           </div>
         ) : (
@@ -148,16 +159,6 @@ export default function WallOfLovePage() {
                           <source src={resolvedUrl} type="video/mp4" />
                           O seu navegador não suporta este formato de vídeo.
                         </video>
-                        <div className="mt-1 flex justify-end">
-                          <a
-                            href={resolvedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-amber-400 hover:underline"
-                          >
-                            Abrir vídeo direto ↗
-                          </a>
-                        </div>
                       </div>
                     )}
 
