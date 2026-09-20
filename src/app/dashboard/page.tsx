@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
     if (campaignsData && campaignsData.length > 0) {
       setCampaigns(campaignsData);
-      const activeId = selectedCampaignId && campaignsData.some(c => c.id === selectedCampaignId)
+      const activeId = selectedCampaignId && campaignsData.some((c) => c.id === selectedCampaignId)
         ? selectedCampaignId
         : campaignsData[0].id;
 
@@ -89,7 +89,7 @@ export default function DashboardPage() {
 
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
     await supabase.from('testimonials').update({ status }).eq('id', id);
-    setTestimonials(prev => prev.map(t => (t.id === id ? { ...t, status } : t)));
+    setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
   };
 
   const handleLogout = async () => {
@@ -97,7 +97,7 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
+  const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const collectionUrl = selectedCampaign ? `${origin}/c/${selectedCampaign.slug}` : '';
   const widgetCode = `<script src="${origin}/widget.js" data-wall="${selectedCampaign?.slug}"></script>`;
@@ -111,16 +111,17 @@ export default function DashboardPage() {
   const exportCSV = () => {
     if (!testimonials.length) return;
     const headers = ['Autor', 'Cargo/Empresa', 'Tipo', 'Avaliacao', 'Depoimento', 'Status', 'Data'];
-    const rows = testimonials.map(t => [
+    const rows = testimonials.map((t) => [
       `"${t.author_name || ''}"`,
       `"${t.author_title || ''}"`,
       `"${t.type}"`,
       t.rating,
       `"${(t.content || '').replace(/"/g, '""')}"`,
       `"${t.status}"`,
-      `"${t.created_at}"`
+      `"${t.created_at}"`,
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -130,7 +131,16 @@ export default function DashboardPage() {
     document.body.removeChild(link);
   };
 
-  const filteredTestimonials = testimonials.filter(t => {
+  // Função auxiliar para transformar caminhos relativos do Storage em URLs públicas válidas
+  const getMediaUrl = (pathOrUrl: string | null) => {
+    if (!pathOrUrl) return '';
+    if (pathOrUrl.startsWith('http')) return pathOrUrl;
+    
+    // Constrói o URL público com base no projeto Supabase e balde testimonials-media
+    return `https://clcomwzpnfoxvanochpz.supabase.co/storage/v1/object/public/testimonials-media/${pathOrUrl}`;
+  };
+
+  const filteredTestimonials = testimonials.filter((t) => {
     if (filter === 'all') return true;
     return t.status === filter;
   });
@@ -216,7 +226,7 @@ export default function DashboardPage() {
                   onChange={handleCampaignChange}
                   className="bg-[#070b14] text-white border border-slate-700/80 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
                 >
-                  {campaigns.map(c => (
+                  {campaigns.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.business_name || c.name} (/c/{c.slug})
                     </option>
@@ -242,7 +252,7 @@ export default function DashboardPage() {
 
             {/* Filter Pills */}
             <div className="flex items-center gap-2 pt-2">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map(tab => (
+              {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setFilter(tab)}
@@ -264,74 +274,80 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredTestimonials.map(t => (
-                  <div
-                    key={t.id}
-                    className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                          {t.type}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                            t.status === 'approved'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : t.status === 'rejected'
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}
-                        >
-                          {t.status}
-                        </span>
-                      </div>
+                {filteredTestimonials.map((t) => {
+                  const resolvedUrl = getMediaUrl(t.media_url);
 
-                      {t.type === 'video' && t.media_url && (
-                        <video
-                          src={t.media_url}
-                          controls
-                          className="w-full rounded-xl mb-3 bg-black max-h-48 object-cover border border-slate-800"
-                        />
-                      )}
+                  return (
+                    <div
+                      key={t.id}
+                      className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                            {t.type}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                              t.status === 'approved'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : t.status === 'rejected'
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}
+                          >
+                            {t.status}
+                          </span>
+                        </div>
 
-                      {t.type === 'audio' && t.media_url && (
-                        <audio src={t.media_url} controls className="w-full mb-3" />
-                      )}
-
-                      {t.content && (
-                        <p className="text-xs text-slate-300 italic mb-4 leading-relaxed line-clamp-4">
-                          "{t.content}"
-                        </p>
-                      )}
-
-                      <div className="pt-2 border-t border-slate-800/60">
-                        <p className="text-xs font-bold text-white">{t.author_name}</p>
-                        {t.author_title && (
-                          <p className="text-[11px] text-slate-400">{t.author_title}</p>
+                        {t.type === 'video' && resolvedUrl && (
+                          <video
+                            src={resolvedUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full rounded-xl mb-3 bg-black max-h-48 object-cover border border-slate-800"
+                          />
                         )}
-                        <p className="text-[10px] text-amber-400 mt-1">{'★'.repeat(t.rating)}</p>
+
+                        {t.type === 'audio' && resolvedUrl && (
+                          <audio src={resolvedUrl} controls preload="metadata" className="w-full mb-3" />
+                        )}
+
+                        {t.content && (
+                          <p className="text-xs text-slate-300 italic mb-4 leading-relaxed line-clamp-4">
+                            "{t.content}"
+                          </p>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-800/60">
+                          <p className="text-xs font-bold text-white">{t.author_name}</p>
+                          {t.author_title && (
+                            <p className="text-[11px] text-slate-400">{t.author_title}</p>
+                          )}
+                          <p className="text-[10px] text-amber-400 mt-1">{'★'.repeat(t.rating)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 mt-4 pt-3 border-t border-slate-800/60">
+                        <button
+                          onClick={() => handleUpdateStatus(t.id, 'approved')}
+                          disabled={t.status === 'approved'}
+                          className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 disabled:opacity-30 transition"
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(t.id, 'rejected')}
+                          disabled={t.status === 'rejected'}
+                          className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-30 transition"
+                        >
+                          Rejeitar
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex gap-2 mt-4 pt-3 border-t border-slate-800/60">
-                      <button
-                        onClick={() => handleUpdateStatus(t.id, 'approved')}
-                        disabled={t.status === 'approved'}
-                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 disabled:opacity-30 transition"
-                      >
-                        Aprovar
-                      </button>
-                      <button
-                        onClick={() => handleUpdateStatus(t.id, 'rejected')}
-                        disabled={t.status === 'rejected'}
-                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-30 transition"
-                      >
-                        Rejeitar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
