@@ -131,12 +131,9 @@ export default function DashboardPage() {
     document.body.removeChild(link);
   };
 
-  // Função auxiliar para transformar caminhos relativos do Storage em URLs públicas válidas
   const getMediaUrl = (pathOrUrl: string | null) => {
     if (!pathOrUrl) return '';
     if (pathOrUrl.startsWith('http')) return pathOrUrl;
-    
-    // Constrói o URL público com base no projeto Supabase e balde testimonials-media
     return `https://clcomwzpnfoxvanochpz.supabase.co/storage/v1/object/public/testimonials-media/${pathOrUrl}`;
   };
 
@@ -147,7 +144,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 p-6 md:p-10">
-      {/* Header */}
+      {/* Cabeçalho */}
       <header className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-8">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-amber-500/20">
@@ -198,7 +195,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto space-y-6">
         {loading ? (
           <div className="p-12 text-center text-sm text-slate-500">A carregar os seus dados...</div>
@@ -217,7 +214,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Top Toolbar */}
+            {/* Barra de Ferramentas */}
             <div className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 w-full md:w-auto">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Campanha:</span>
@@ -250,7 +247,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Filter Pills */}
+            {/* Abas de Filtro */}
             <div className="flex items-center gap-2 pt-2">
               {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
                 <button
@@ -267,7 +264,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Testimonials List */}
+            {/* Grelha de Testemunhos */}
             {filteredTestimonials.length === 0 ? (
               <div className="bg-[#0d1527] border border-slate-800/80 rounded-2xl p-10 text-center text-sm text-slate-500">
                 Nenhum depoimento encontrado neste filtro para esta campanha.
@@ -301,17 +298,37 @@ export default function DashboardPage() {
                         </div>
 
                         {t.type === 'video' && resolvedUrl && (
-                          <video
-                            src={resolvedUrl}
-                            controls
-                            playsInline
-                            preload="metadata"
-                            className="w-full rounded-xl mb-3 bg-black max-h-48 object-cover border border-slate-800"
-                          />
+                          <div className="relative mb-3">
+                            <video
+                              controls
+                              playsInline
+                              preload="auto"
+                              className="w-full rounded-xl bg-black max-h-56 object-cover border border-slate-800"
+                            >
+                              <source src={resolvedUrl} type="video/webm" />
+                              <source src={resolvedUrl} type="video/mp4" />
+                              O seu navegador não suporta este formato de vídeo.
+                            </video>
+                            <div className="mt-1 flex justify-end">
+                              <a
+                                href={resolvedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] text-amber-400 hover:underline inline-flex items-center gap-1"
+                              >
+                                Abrir vídeo noutra aba ↗
+                              </a>
+                            </div>
+                          </div>
                         )}
 
                         {t.type === 'audio' && resolvedUrl && (
-                          <audio src={resolvedUrl} controls preload="metadata" className="w-full mb-3" />
+                          <div className="mb-3">
+                            <audio controls preload="auto" className="w-full">
+                              <source src={resolvedUrl} type="audio/webm" />
+                              <source src={resolvedUrl} type="audio/mp4" />
+                            </audio>
+                          </div>
                         )}
 
                         {t.content && (
