@@ -60,34 +60,36 @@ export default function NewCampaignPage() {
         return;
       }
 
-      const cleanQuestions = questions.map(q => q.trim()).filter(Boolean);
+      const cleanQuestions = questions.map((q) => q.trim()).filter(Boolean);
 
-      const defaultWelcome = language === 'pt-PT'
-        ? 'Olá! Gostaríamos muito de conhecer a sua experiência connosco. Demora menos de 2 minutos.'
-        : language === 'es'
-        ? '¡Hola! Nos encantaría conocer tu experiencia con nosotros. Toma menos de 2 minutos.'
-        : 'Hi! We would love to hear about your experience with us. It takes less than 2 minutes.';
+      const defaultWelcome =
+        language === 'pt-PT'
+          ? 'Olá! Gostaríamos muito de conhecer a sua experiência connosco. Demora menos de 2 minutos.'
+          : language === 'es'
+          ? '¡Hola! Nos encantaría conocer tu experiencia con nosotros. Toma menos de 2 minutos.'
+          : 'Hi! We would love to hear about your experience with us. It takes less than 2 minutes.';
 
-      const defaultThankYou = language === 'pt-PT'
-        ? 'Muito obrigado pelo seu testemunho!'
-        : language === 'es'
-        ? '¡Muchas gracias por tu testimonio!'
-        : 'Thank you very much for your testimonial!';
+      const defaultThankYou =
+        language === 'pt-PT'
+          ? 'Muito obrigado pelo seu testemunho!'
+          : language === 'es'
+          ? '¡Muchas gracias por tu testimonio!'
+          : 'Thank you very much for your testimonial!';
 
-      const { error: insertError } = await supabase
-        .from('campaigns')
-        .insert([
-          {
-            name,
-            slug,
-            message: welcomeMessage || defaultWelcome,
-            thank_you_message: thankYouMessage || defaultThankYou,
-            guide_questions: cleanQuestions,
-            countdown_seconds: countdown,
-            language,
-            user_id: user.id
-          }
-        ]);
+      const payload = {
+        business_name: name,
+        slug: slug.trim(),
+        welcome_message: welcomeMessage || defaultWelcome,
+        message: welcomeMessage || defaultWelcome,
+        thank_you_message: thankYouMessage || defaultThankYou,
+        questions: cleanQuestions,
+        guide_questions: cleanQuestions,
+        countdown_seconds: countdown,
+        language: language,
+        user_id: user.id,
+      };
+
+      const { error: insertError } = await supabase.from('campaigns').insert([payload]);
 
       if (insertError) {
         throw insertError;
@@ -95,7 +97,7 @@ export default function NewCampaignPage() {
 
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar a campanha. Tente outro link.');
+      setError(err.message || 'Erro ao criar a campanha. Tente outro endereço/slug.');
     } finally {
       setLoading(false);
     }
@@ -246,7 +248,7 @@ export default function NewCampaignPage() {
               {[
                 { label: 'Desligado', val: 0 },
                 { label: '3s', val: 3 },
-                { label: '5s', val: 5 }
+                { label: '5s', val: 5 },
               ].map((item) => (
                 <button
                   key={item.val}

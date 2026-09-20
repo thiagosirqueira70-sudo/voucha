@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic';
 
 interface Campaign {
   id: string;
-  name: string;
+  name?: string;
+  business_name?: string;
   slug: string;
 }
 
@@ -217,7 +218,7 @@ export default function DashboardPage() {
                 >
                   {campaigns.map(c => (
                     <option key={c.id} value={c.id}>
-                      {c.name} (/c/{c.slug})
+                      {c.business_name || c.name} (/c/{c.slug})
                     </option>
                   ))}
                 </select>
